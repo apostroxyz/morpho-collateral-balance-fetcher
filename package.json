@@ -1,10 +1,10 @@
 {
-  "name": "pendle-generic-balance-fetcher",
+  "name": "morpho-collateral-balance-fetcher",
   "dependencies": {
     "@types/node": "^20.14.2",
-    "axios": "^1.6.8",
-    "ethers": "^5.7.2",
-    "typescript": "^5.4.5"
+    "dotenv": "^16.4.7",
+    "typescript": "^5.4.5",
+    "viem": "^2.25.0"
   },
   "scripts": {
     "format": "prettier --config .prettierrc 'src/**/*.ts' --write",

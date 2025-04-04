@@ -1,15 +1,21 @@
-# Pendle generic balance fetcher
-
+# Morpho collateral balance fetcher
 
 ## Set up
 
 1. Install required package by:
 
-```
-yarn install
-```
+    ```bash
+    yarn install
+    ```
 
-2. Edit the configuration file (`./src/configuration.ts`) to fill in the pool's information. Do note that **all addresses in this file must be in lowercase**.
+2. Configure RPC URLs using `.env` file
+
+    ```bash
+    cp .env.example .env
+    vim .env
+    ```
+
+3. Edit the configuration file (`./src/configuration.ts`) to fill in the market information.
 
 ## Usage
 

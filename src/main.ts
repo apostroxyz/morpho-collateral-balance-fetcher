@@ -1,65 +1,78 @@
-import { POOL_INFO } from './configuration';
-import { applyLpHolderShares, applyYtHolderShares } from './logic';
-import { PendleAPI } from './pendle-api';
-import { UserRecord } from './types';
-
-type SnapshotResult = {
-  resultYT: UserRecord;
-  resultLP: UserRecord;
-};
+import { Hex } from 'viem';
+import { morphoAbi } from './abis/morpho';
+import { MORPHO_MARKET } from './configuration';
+import { loadEvents } from './loadEvents';
+import { BalancesSnapshot } from './types';
+import { getChainContracts, getPublicClient } from './web3';
 
 async function fetchUserBalanceSnapshot(
-  allYTUsers: string[],
-  allLPUsers: string[],
+  accounts: Hex[],
   blockNumber: number
-): Promise<SnapshotResult> {
-  const resultYT: UserRecord = {};
-  const resultLP: UserRecord = {};
-  await applyYtHolderShares(resultYT, allYTUsers, blockNumber);
-  for (const lp of POOL_INFO.LPs) {
-    if (lp.deployedBlock <= blockNumber) {
-      await applyLpHolderShares(resultLP, lp.address, allLPUsers, blockNumber);
-    }
-  }
-  return {
-    resultYT,
-    resultLP
-  };
+): Promise<BalancesSnapshot> {
+  const client = getPublicClient(MORPHO_MARKET.chainId);
+  const contracts = getChainContracts(MORPHO_MARKET.chainId);
+
+  const snapshotEntries = await Promise.all(
+    accounts.map((account) =>
+      client
+        .readContract({
+          abi: morphoAbi,
+          address: contracts.morpho.address,
+          functionName: 'position',
+          args: [MORPHO_MARKET.marketId, account],
+          blockNumber: BigInt(blockNumber)
+        })
+        .then(([, , collateral]) => [account, collateral] as const)
+    )
+  );
+
+  return Object.fromEntries(snapshotEntries);
 }
 
 async function fetchUserBalanceSnapshotBatch(
   blockNumbers: number[]
-): Promise<SnapshotResult[]> {
-  const allLiquidLockerTokens = POOL_INFO.liquidLockers.map(
-    (l) => l.receiptToken
-  );
-  const allLPTokens = POOL_INFO.LPs.map((l) => l.address);
-
-  const allYTUsers = await PendleAPI.query(POOL_INFO.YT);
-  const allLPUsers = await PendleAPI.queryAllTokens([
-    ...allLPTokens,
-    ...allLiquidLockerTokens
-  ]);
+): Promise<BalancesSnapshot[]> {
+  const accounts = await fetchAllAccounts();
 
   return await Promise.all(
-    blockNumbers.map((b) => fetchUserBalanceSnapshot(allYTUsers, allLPUsers, b))
+    blockNumbers.map((block) => fetchUserBalanceSnapshot(accounts, block))
+  );
+}
+
+async function fetchAllAccounts(): Promise<Hex[]> {
+  const client = getPublicClient(MORPHO_MARKET.chainId);
+  const contracts = getChainContracts(MORPHO_MARKET.chainId);
+
+  const latestBlock = await client.getBlockNumber();
+
+  const supplyEvents = await loadEvents(
+    BigInt(contracts.morpho.blockCreated),
+    latestBlock,
+    (fromBlock, toBlock) =>
+      client.getContractEvents({
+        abi: morphoAbi,
+        address: contracts.morpho.address,
+        eventName: 'SupplyCollateral',
+        args: { id: MORPHO_MARKET.marketId },
+        strict: true,
+        fromBlock,
+        toBlock
+      })
+  );
+
+  return Array.from(
+    new Set(supplyEvents.map(({ args }) => args.onBehalf.toLowerCase() as Hex))
   );
 }
 
 async function main() {
-  const block = 2796989;
-  const res = (await fetchUserBalanceSnapshotBatch([block]))[0];
+  const block = 22144148;
+  const snapshot = (await fetchUserBalanceSnapshotBatch([block]))[0];
 
-  console.log('YT');
-  for (const user in res.resultYT) {
-    if (res.resultYT[user].eq(0)) continue;
-    console.log(user, res.resultYT[user].toString());
-  }
-
-  console.log('LP');
-  for (const user in res.resultLP) {
-    if (res.resultLP[user].eq(0)) continue;
-    console.log(user, res.resultLP[user].toString());
+  console.log(`Collaterals at #${block}`);
+  for (const [user, balance] of Object.entries(snapshot)) {
+    if (balance === BigInt(0)) continue;
+    console.log(user, balance.toString());
   }
 }
 
