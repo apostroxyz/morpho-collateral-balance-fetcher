@@ -6,7 +6,7 @@ import { UserRecord } from './types';
 type SnapshotResult = {
   resultYT: UserRecord;
   resultLP: UserRecord;
-}
+};
 
 async function fetchUserBalanceSnapshot(
   allYTUsers: string[],
@@ -50,14 +50,14 @@ async function main() {
   const block = 2796989;
   const res = (await fetchUserBalanceSnapshotBatch([block]))[0];
 
-  console.log('YT')
-  for (let user in res.resultYT) {
+  console.log('YT');
+  for (const user in res.resultYT) {
     if (res.resultYT[user].eq(0)) continue;
     console.log(user, res.resultYT[user].toString());
   }
 
-  console.log('LP')
-  for (let user in res.resultLP) {
+  console.log('LP');
+  for (const user in res.resultLP) {
     if (res.resultLP[user].eq(0)) continue;
     console.log(user, res.resultLP[user].toString());
   }

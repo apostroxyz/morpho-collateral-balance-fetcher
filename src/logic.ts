@@ -1,5 +1,5 @@
 import { BigNumber, ethers } from 'ethers';
-import { UserRecord, YTInterestData } from './types';
+import { UserRecord } from './types';
 import {
   getAllERC20Balances,
   getAllMarketActiveBalances,

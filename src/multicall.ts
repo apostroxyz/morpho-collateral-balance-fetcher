@@ -1,4 +1,3 @@
-import MulticalABI from '../abis/Multicall.json';
 import { BigNumber, utils } from 'ethers';
 import * as constants from './consts';
 import { YTInterestData } from './types';
@@ -90,7 +89,7 @@ export async function getAllYTInterestData(
 export async function getYTGeneralData(
   ytAddr: string,
   blockNumber: number
-): Promise<{ isExpired: boolean; syReserve: BigNumber, factory: string }> {
+): Promise<{ isExpired: boolean; syReserve: BigNumber; factory: string }> {
   const callDatas = [
     {
       target: ytAddr,
